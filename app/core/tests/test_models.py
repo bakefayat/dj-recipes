@@ -32,3 +32,11 @@ class ModelTest(TestCase):
         '''Raise ValueError when email field is blank or None'''
         with self.assertRaises(ValueError):
             get_user_model().objects.create_user(None, '123')
+
+    def test_create_superuser(self):
+        email = 'eb@gmail.com'
+        user = get_user_model().objects.create_superuser(
+            email=email, password='1234'
+            )
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
