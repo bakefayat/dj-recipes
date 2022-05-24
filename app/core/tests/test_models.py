@@ -17,8 +17,8 @@ class ModelTest(TestCase):
         self.assertTrue(user.check_password(password))
 
     def test_user_with_normalized_email(self):
-        email = "mail@Mail.com"
-        password = '1234'
+        email = 'mail@Mail.com'
+        password = '12345'
 
         user = get_user_model().objects.create_user(
             email=email,
@@ -27,3 +27,8 @@ class ModelTest(TestCase):
 
         self.assertEqual(user.email, email.lower())
         self.assertTrue(user.check_password(password))
+
+    def test_user_with_invalid_email(self):
+        '''Raise ValueError when email field is blank or None'''
+        with self.assertRaises(ValueError):
+            get_user_model().objects.create_user(None, '123')
