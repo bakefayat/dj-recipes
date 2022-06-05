@@ -25,3 +25,10 @@ class AdminSiteTests(TestCase):
 
         self.assertContains(res, self.user.name)
         self.assertContains(res, self.user.email)
+
+    def test_user_detail(self):
+        """Test that user detail is okay"""
+        url = reverse('admin:core_user_change', args=[self.user.id])
+        res = self.client.get(url)
+
+        self.assertTrue(res.status_code, 200)
