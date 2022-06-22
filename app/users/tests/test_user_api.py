@@ -8,7 +8,7 @@ from rest_framework import status
 
 CREATE_USER_URL = reverse('users:create')
 CREATE_TOKEN_URL = reverse('users:token')
-
+USER_PROFILE_URL = reverse('users:profile')
 def create_user(**params):
     return get_user_model().objects.create_user(**params)
 
@@ -89,7 +89,7 @@ class PublicUserApiTests(TestCase):
     def test_create_token_unregistered_user(self):
         """Test that token is not created for user that isnt registered"""
         payload = {
-            'username': 'bakefayat@test.com',
+            'email': 'bakefayat@test.com',
             'password': 'okaypassword'
         }
         res = self.client.post(CREATE_TOKEN_URL, payload)
@@ -100,10 +100,54 @@ class PublicUserApiTests(TestCase):
     def test_create_token_missing_field(self):
         """Test that email and password are required"""
         payload = {
-            'username': 'bakefayat@test.com',
+            'email': 'bakefayat@test.com',
             'passowrd': ''
         }
         res = self.client.post(CREATE_TOKEN_URL, payload)
 
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrive_user_unauthorized(self):
+        """Test that retrive user profile without authorization"""
+        res = self.client.get(USER_PROFILE_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserApiTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create(
+            email='eb@bakefayat.com',
+            password='cleanpassword',
+            name='ehsan bakefayat'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrive_profile_success(self):
+        "Test retrieving profile for logged in user"
+        res = self.client.get(USER_PROFILE_URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {
+            'name': self.user.name,
+            'email': self.user.email
+        })
+    
+    def test_retrieve_profile_post_not_allowed(self):
+        """Test retrieving profile with post method not allowed"""
+        res = self.client.post(USER_PROFILE_URL, {})
+
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+    def test_update_profile(self):
+        payload = {
+            'name': 'new name from me',
+            'password': 'newStrongpassword',
+        }
+        res = self.client.patch(USER_PROFILE_URL, payload)
+
+        self.user.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.user.name, payload['name'])
+        self.assertEqual(self.user.check_password(payload['password']))
