@@ -7,7 +7,7 @@ from .serializers import UserSerializer, AuthTokenSerializer
 
 class UsersCreateAPIView(generics.CreateAPIView):
     serializer_class = UserSerializer
-    
+
 
 class CreateTokenView(ObtainAuthToken):
     """Create a new auth token for user"""

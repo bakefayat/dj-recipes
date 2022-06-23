@@ -6,9 +6,9 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 
-CREATE_USER_URL = reverse('users:create')
-CREATE_TOKEN_URL = reverse('users:token')
-USER_PROFILE_URL = reverse('users:profile')
+CREATE_USER_URL = reverse('user:create')
+CREATE_TOKEN_URL = reverse('user:token')
+USER_PROFILE_URL = reverse('user:me')
 def create_user(**params):
     return get_user_model().objects.create_user(**params)
 
@@ -29,7 +29,7 @@ class PublicUserApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         user = get_user_model().objects.get(**res.data)
-        self.assertEqual(user.password, payload['password'])
+        self.assertTrue(user.check_password(payload['password']))
         self.assertNotIn('password', res.data)
 
 
@@ -42,11 +42,11 @@ class PublicUserApiTests(TestCase):
             'name': 'ehsan bakefayat'
         }
         create_user(**payload)
-        
+
         res = self.client.post(CREATE_USER_URL, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
     def test_password_too_short(self):
         payload = {
             'email': 'test@eb.com',
@@ -85,7 +85,7 @@ class PublicUserApiTests(TestCase):
 
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
     def test_create_token_unregistered_user(self):
         """Test that token is not created for user that isnt registered"""
         payload = {
@@ -133,13 +133,13 @@ class PrivateUserApiTests(TestCase):
             'name': self.user.name,
             'email': self.user.email
         })
-    
+
     def test_retrieve_profile_post_not_allowed(self):
         """Test retrieving profile with post method not allowed"""
         res = self.client.post(USER_PROFILE_URL, {})
 
         self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+
     def test_update_profile(self):
         payload = {
             'name': 'new name from me',
@@ -150,4 +150,4 @@ class PrivateUserApiTests(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(self.user.name, payload['name'])
-        self.assertEqual(self.user.check_password(payload['password']))
+        self.assertTrue(self.user.check_password(payload['password']))
