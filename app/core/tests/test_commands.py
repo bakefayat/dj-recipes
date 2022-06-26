@@ -4,11 +4,14 @@ from django.core.management import call_command
 from django.db.utils import OperationalError
 from django.test import TestCase
 
+
 class CommandsTest(TestCase):
 
     def test_wait_for_db_ready(self):
         """Test waiting for db when db is available"""
-        with patch('django.utils.connection.BaseConnectionHandler.__getitem__') as gi:
+        with patch(
+                  'django.utils.connection.BaseConnectionHandler.__getitem__'
+                  ) as gi:
             gi.return_value = True
             call_command('wait_for_db')
             self.assertEqual(gi.call_count, 1)
@@ -16,7 +19,9 @@ class CommandsTest(TestCase):
     @patch('time.sleep', return_value=None)
     def test_wait_for_db(self, mocked_sleep):
         """Test waiting for db"""
-        with patch('django.utils.connection.BaseConnectionHandler.__getitem__') as gi:
+        with patch(
+                  'django.utils.connection.BaseConnectionHandler.__getitem__'
+                   ) as gi:
             gi.side_effect = [OperationalError] * 5 + [True]
             call_command('wait_for_db')
             self.assertEqual(gi.call_count, 6)

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
+import json
 from rest_framework.test import APIClient
 from rest_framework import status
 
@@ -9,8 +9,12 @@ from rest_framework import status
 CREATE_USER_URL = reverse('users:create')
 CREATE_TOKEN_URL = reverse('users:token')
 USER_PROFILE_URL = reverse('users:profile')
+USERS_LIST_URL = reverse('users:list')
+
+
 def create_user(**params):
     return get_user_model().objects.create_user(**params)
+
 
 class PublicUserApiTests(TestCase):
     """Test the users API (public)"""
@@ -32,8 +36,6 @@ class PublicUserApiTests(TestCase):
         self.assertTrue(user.check_password(payload['password']))
         self.assertNotIn('password', res.data)
 
-
-
     def test_user_exists(self):
         """ Test creating user that already exists fails"""
         payload = {
@@ -42,11 +44,11 @@ class PublicUserApiTests(TestCase):
             'name': 'ehsan bakefayat'
         }
         create_user(**payload)
-        
+
         res = self.client.post(CREATE_USER_URL, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
     def test_password_too_short(self):
         payload = {
             'email': 'test@eb.com',
@@ -58,7 +60,7 @@ class PublicUserApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         user_exists = get_user_model().objects.filter(
-            email = payload['email']
+            email=payload['email']
         ).exists()
         self.assertFalse(user_exists)
 
@@ -85,7 +87,7 @@ class PublicUserApiTests(TestCase):
 
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
     def test_create_token_unregistered_user(self):
         """Test that token is not created for user that isnt registered"""
         payload = {
@@ -114,13 +116,19 @@ class PublicUserApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_users_list(self):
+        """Test that shows user list"""
+        res = self.client.get(USERS_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class PrivateUserApiTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create(
             email='eb@bakefayat.com',
             password='cleanpassword',
-            name='ehsan bakefayat'
+            name='ehsan bakefayat',
+            is_superuser=True,
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
@@ -133,13 +141,13 @@ class PrivateUserApiTests(TestCase):
             'name': self.user.name,
             'email': self.user.email
         })
-    
+
     def test_retrieve_profile_post_not_allowed(self):
         """Test retrieving profile with post method not allowed"""
         res = self.client.post(USER_PROFILE_URL, {})
 
         self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+
     def test_update_profile(self):
         payload = {
             'name': 'new name from me',
@@ -151,3 +159,17 @@ class PrivateUserApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(self.user.name, payload['name'])
         self.assertTrue(self.user.check_password(payload['password']))
+
+    def test_users_list(self):
+        self.user2 = get_user_model().objects.create(
+            email='ehsan@gmail.com',
+            password='963852',
+            name='ibrahimovic'
+        )
+
+        res = self.client.get(USERS_LIST_URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertContains(res, self.user2.email)
+        self.assertContains(res, self.user.email)
+        data = json.loads(res.content)
+        self.assertEqual(len(data), 2)
