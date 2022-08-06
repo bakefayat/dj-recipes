@@ -30,7 +30,7 @@ class PrivateIngredientsApiTests(TestCase):
     """Test ingredients Api as private user"""
     def setUp(self):
         self.client = APIClient()
-        self.user = get_user_model().objects.create(
+        self.user = get_user_model().objects.create_user(
             "bakefayat@gmail.com",
             "password123"
         )
@@ -50,7 +50,7 @@ class PrivateIngredientsApiTests(TestCase):
 
     def test_ingredients_limited_to_user(self):
         """Test that returned ingredients belonged to authenticated user"""
-        user2 = get_user_model().objects.create(
+        user2 = get_user_model().objects.create_user(
             'james',
             'pass123')
         Ingredients.objects.create(name='celery', user=user2)
